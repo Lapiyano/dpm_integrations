@@ -11,14 +11,14 @@ from .models import (
 ) 
 from guardian.admin import GuardedModelAdmin
 from guardian.shortcuts import get_objects_for_user
-
+from .admin_mixins import GuardianPermissionMixin
 
 
 # --------------------------------------------------------
 # SCHOOL BRANCH
 # --------------------------------------------------------
 @admin.register(SchoolBranch)
-class SchoolBranchAdmin(GuardedModelAdmin): 
+class SchoolBranchAdmin(GuardedModelAdmin, GuardianPermissionMixin): 
     compressed_fields = False 
     
     warn_unsaved_form = True
@@ -28,42 +28,6 @@ class SchoolBranchAdmin(GuardedModelAdmin):
     list_filter = ("created_at",)
     ordering = ("name",)
     readonly_fields = ("created_at", "updated_at")
-    
-    def has_module_permission(self, request):
-        if super().has_module_permission(request):
-            return True
-        return self.get_model_objects(request).exists()
-
-    def get_queryset(self, request):
-        if request.user.is_superuser:
-            return super().get_queryset(request)
-        data = self.get_model_objects(request)
-        return data
-
-    def get_model_objects(self, request, action=None, klass=None):
-        opts = self.opts
-        actions = [action] if action else ['view','edit','delete']
-        klass = klass if klass else opts.model
-        model_name = klass._meta.model_name
-        return get_objects_for_user(user=request.user, perms=[f'{perm}_{model_name}' for perm in actions], klass=klass, any_perm=True)
-
-    def has_permission(self, request, obj, action):
-        opts = self.opts
-        code_name = f'{action}_{opts.model_name}'
-        if obj:
-            return request.user.has_perm(f'{opts.app_label}.{code_name}', obj)
-        else:
-            return self.get_model_objects(request).exists()
-
-    def has_view_permission(self, request, obj=None):
-        return self.has_permission(request, obj, 'view')
-
-    def has_change_permission(self, request, obj=None):
-        return self.has_permission(request, obj, 'change')
-
-    def has_delete_permission(self, request, obj=None):
-        return self.has_permission(request, obj, 'delete')
-
 
 # --------------------------------------------------------
 # USER ADMIN
@@ -71,7 +35,7 @@ class SchoolBranchAdmin(GuardedModelAdmin):
 admin.site.unregister(Group)
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin, ModelAdmin):
+class UserAdmin(BaseUserAdmin, ModelAdmin,GuardianPermissionMixin):
     form = UserChangeForm
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
@@ -110,7 +74,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 
 
 @admin.register(Group)
-class GroupAdmin(BaseGroupAdmin, ModelAdmin):
+class GroupAdmin(BaseGroupAdmin, ModelAdmin, GuardianPermissionMixin):
     pass
 
 
@@ -118,7 +82,7 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
 # USER PROFILE
 # --------------------------------------------------------
 @admin.register(UserProfile)
-class UserProfileAdmin(ModelAdmin):
+class UserProfileAdmin(GuardianPermissionMixin, ModelAdmin ):
     list_display = ("user", "school_branch", "website")
     search_fields = ("user__email", "user__first_name", "user__last_name")
     list_filter = ("school_branch",)
@@ -129,7 +93,7 @@ class UserProfileAdmin(ModelAdmin):
 # ADDRESS
 # --------------------------------------------------------
 @admin.register(Address)
-class AddressAdmin(GuardedModelAdmin):
+class AddressAdmin(GuardedModelAdmin, GuardianPermissionMixin):
     list_display = ("street", "city", "state", "postal_code", "country")
     search_fields = ("street", "city", "state", "postal_code", "country")
     list_filter = ("country", "state", "city")
@@ -140,7 +104,7 @@ class AddressAdmin(GuardedModelAdmin):
 # TEACHER PROFILE
 # --------------------------------------------------------
 @admin.register(TeacherProfile)
-class TeacherProfileAdmin(GuardedModelAdmin):
+class TeacherProfileAdmin(GuardedModelAdmin, GuardianPermissionMixin):
     list_display = ("user", "school_branch")
     search_fields = ("user__email", "user__first_name", "user__last_name", )
     list_filter = ("school_branch",)
@@ -154,7 +118,7 @@ class TeacherProfileAdmin(GuardedModelAdmin):
 # STUDENT PROFILE
 # --------------------------------------------------------
 @admin.register(StudentProfile)
-class StudentProfileAdmin(GuardedModelAdmin):
+class StudentProfileAdmin(GuardianPermissionMixin, GuardedModelAdmin):
     list_display = ("user", )
     search_fields = ("user__email", )
   #  list_filter = (,)
@@ -167,7 +131,7 @@ class StudentProfileAdmin(GuardedModelAdmin):
 # GUARDIAN PROFILE
 # --------------------------------------------------------
 @admin.register(GuardianProfile)
-class GuardianProfileAdmin(ModelAdmin):
+class GuardianProfileAdmin(GuardianPermissionMixin, ModelAdmin):
     list_display = ("user", "relationship", "contact_number", "pupil")
     search_fields = (
         "user__email",
@@ -183,7 +147,7 @@ class GuardianProfileAdmin(ModelAdmin):
 # ADMIN PROFILE
 # --------------------------------------------------------
 @admin.register(AdminProfile)
-class AdminProfileAdmin(ModelAdmin):
+class AdminProfileAdmin(GuardianPermissionMixin, ModelAdmin ):
     list_display = ("user", "department", "school_branch")
     search_fields = ("user__email", "department")
     list_filter = ("department", "school_branch")

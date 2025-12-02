@@ -1,0 +1,214 @@
+{% extends "account/base_entrance.html" %}
+{% load i18n %}
+{% load allauth account %}
+
+{% block head_title %}
+    {% trans "Sign In" %}
+{% endblock head_title %}
+
+{% block content %}
+
+<style>
+    body {
+        background: #e6eff9;
+        font-family: "Inter", sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hide top menu/header from base_entrance */
+    header, .site-header, nav {
+        display: none !important;
+    }
+
+    .auth-container {
+        max-width: 420px;
+        margin: 50px auto;
+        background: #ffffff;
+        border-radius: 18px;
+        padding: 35px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        box-sizing: border-box;
+    }
+
+    .auth-title {
+        text-align: center;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: #0a2540;
+    }
+
+    .auth-subtext {
+        text-align: center;
+        font-size: 14px;
+        color: #46505a;
+        margin-bottom: 25px;
+        line-height: 1.4;
+    }
+
+    .auth-subtext a {
+        color: #007bff;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .auth-subtext a:hover {
+        text-decoration: underline;
+    }
+
+    form {
+        margin: 0;
+        padding: 0;
+    }
+
+    form input {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #ccd4dd;
+        border-radius: 10px;
+        margin-bottom: 14px;
+        font-size: 15px;
+        background: #f8f9fb;
+        transition: 0.25s;
+        box-sizing: border-box;
+    }
+
+    form input:focus {
+        border-color: #007bff;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.22);
+        outline: none;
+    }
+
+    .btn-primary {
+        width: 100%;
+        background: #007bff;
+        color: white;
+        padding: 13px;
+        border-radius: 10px;
+        border: none;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: 0.25s;
+        box-sizing: border-box;
+    }
+
+    .btn-primary:hover {
+        background: #005fcc;
+    }
+
+    .auth-divider {
+        margin: 25px 0;
+        height: 1px;
+        background: #e0e0e0;
+        border: none;
+    }
+
+    .btn-outline {
+        width: 100%;
+        padding: 12px;
+        background: white;
+        border: 2px solid #007bff;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        color: #007bff;
+        margin-bottom: 12px;
+        transition: 0.25s;
+        box-sizing: border-box;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+    }
+
+    .btn-outline:hover {
+        background: #007bff;
+        color: white;
+    }
+
+    /* Fix for allauth element styling */
+ 
+  
+</style>
+
+<div class="auth-container">
+
+    {% element h1 class="auth-title" %}
+        {% trans "Sign In" %}
+    {% endelement %}
+
+    {% if not SOCIALACCOUNT_ONLY %}
+        <p class="auth-subtext">
+            {% blocktranslate %}
+            If you have not created an account yet, please 
+            <a href="{{ signup_url }}">sign up</a> first.
+            {% endblocktranslate %}
+        </p>
+
+        {% url 'account_login' as login_url %}
+        {% element form form=form method="post" action=login_url tags="entrance,login" %}
+            {% slot body %}
+                {% csrf_token %}
+
+                {# Render all form fields without labels, placeholders only #}
+                {% for field in form %}
+                    {% if field.name != "remember" %}
+                        <input
+                            type="{{ field.field.widget.input_type }}"
+                            name="{{ field.html_name }}"
+                            value="{{ field.value|default:'' }}"
+                            placeholder="{{ field.label }}"
+                            {% if field.field.required %}required{% endif %}
+                        >
+                    {% endif %}
+                {% endfor %}
+
+                {# Hidden redirect field REQUIRED for next= functionality #}
+                {{ redirect_field }}
+
+            {% endslot %}
+
+            {% slot actions %}
+                <button type="submit" class="btn-primary">
+                    {% trans "Sign In" %}
+                </button>
+            {% endslot %}
+        {% endelement %}
+    {% endif %}
+
+    {% if LOGIN_BY_CODE_ENABLED or PASSKEY_LOGIN_ENABLED %}
+        <hr class="auth-divider">
+
+        <div>
+            {% if PASSKEY_LOGIN_ENABLED %}
+                <button type="submit" form="mfa_login" id="passkey_login" class="btn-outline">
+                    {% trans "Sign in with a passkey" %}
+                </button>
+            {% endif %}
+
+            {% if LOGIN_BY_CODE_ENABLED %}
+                <a href="{{ request_login_code_url }}" class="btn-outline">
+                    {% trans "Send me a sign-in code" %}
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% if SOCIALACCOUNT_ENABLED %}
+        <hr class="auth-divider">
+        {% include "socialaccount/snippets/login.html" with page_layout="entrance" %}
+    {% endif %}
+
+</div>
+
+{% endblock content %}
+
+{% block extra_body %}
+    {{ block.super }}
+    {% if PASSKEY_LOGIN_ENABLED %}
+        {% include "mfa/webauthn/snippets/login_script.html" with button_id="passkey_login" %}
+    {% endif %}
+{% endblock %}

@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'allauth.account', 
     "accounts",
     "school",
+    "applications"
 ]
 
 MIDDLEWARE = [
